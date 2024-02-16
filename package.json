@@ -1,0 +1,30 @@
+{
+  "name": "vulcaneruption",
+  "version": "0.1.0",
+  "description": "A vulnerability scanner for (mostly) russian servers that use the Vulcan anticheat",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Milk-Cool/VulcanEruption.git"
+  },
+  "keywords": [
+    "vulcan",
+    "minecraft",
+    "vulnerability"
+  ],
+  "author": "Milk_Cool",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Milk-Cool/VulcanEruption/issues"
+  },
+  "homepage": "https://github.com/Milk-Cool/VulcanEruption#readme",
+  "dependencies": {
+    "mineflayer": "^4.19.0",
+    "pino": "^8.18.0",
+    "randomstring": "^1.3.0",
+    "vec3": "^0.1.10"
+  }
+}
