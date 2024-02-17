@@ -68,7 +68,7 @@ const checkServer = async server => {
     logger.info("Registered and logged in!");
 
     logger.info("Trying to see what plugins we have...");
-    bot.chat("/pl");
+    bot.chat("/plugins");
     let plugins = "";
     bot.on("messagestr", msg => {
         plugins += msg;
