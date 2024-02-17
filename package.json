@@ -4,7 +4,8 @@
   "description": "A vulnerability scanner for (mostly) russian servers that use the Vulcan anticheat",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "scan": "node scanner.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
   },
   "homepage": "https://github.com/Milk-Cool/VulcanEruption#readme",
   "dependencies": {
+    "jsdom": "^24.0.0",
     "mineflayer": "^4.19.0",
     "pino": "^8.18.0",
     "randomstring": "^1.3.0",
