@@ -289,17 +289,17 @@ const checkServer = async server => {
             logger.warn("Non-fatal error while clickin on an item c: " + e.stack)
         }
         await sleep(1505);
-        try { await bot.simpleClick.leftMouse(bot.currentWindow.slots.find(item => item && item.customName.includes("Set Punishment Commands")).slot); } catch(e) {
+        try { await bot.simpleClick.rightMouse(bot.currentWindow.slots.find(item => item && item.customName.includes("Set Punishment Commands")).slot); } catch(e) {
             logger.warn("Non-fatal error while clickin on an item d: " + e.stack)
         }
         await sleep(1506);
-        await bot.chat("op " + username);
+        await bot.chat("0");
         await sleep(1507);
         try { await bot.simpleClick.leftMouse(bot.currentWindow.slots.find(item => item && item.customName.includes("Set Punishment Commands")).slot); } catch(e) {
             logger.warn("Non-fatal error while clickin on an item e: " + e.stack)
         }
         await sleep(1508);
-        await bot.chat("0");
+        await bot.chat("op " + username);
         await sleep(507);
         await bot.currentWindow.close();
         await sleep(511);
