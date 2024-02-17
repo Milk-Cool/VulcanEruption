@@ -102,11 +102,13 @@ const checkServer = async server => {
 
     bot.once("login", () => { loggedIn = true });
     bot.once("end", () => {
-        if(!handleEnd) return;
-        bot = mineflayer.createBot(opts);
-        bot.once("login", () => { loggedIn = true });
-        bot.loadPlugin(pathfinder);
-        logger.info("REstarted!");
+        try {
+            if(!handleEnd) return;
+            bot = mineflayer.createBot(opts);
+            bot.once("login", () => { loggedIn = true });
+            bot.loadPlugin(pathfinder);
+            logger.info("REstarted!");
+        } catch(_) {}
     });
 
     await Promise.race([
@@ -372,12 +374,19 @@ Was able to obtain OP: ${canObtain}
     logger.info("Bot " + username + " done with certainity " + certainity + ", thank you!");
 }
 
-(async () => {
-    for(let server of servers) {
+// TODO: proper threading
+const worker = async () => {
+    while(servers.length > 0) {
+        const server = servers.shift();
         try {
             await checkServer(server);
         } catch(e) {
             logger.error("A bot for " + server.ip + " threw an error: " + e.stack);
         }
     }
+}
+
+(async () => {
+    for(let i = 0; i < Math.min(config.threads, servers.length); i++)
+        setTimeout(worker);
 })();

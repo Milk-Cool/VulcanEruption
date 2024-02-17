@@ -1,3 +1,4 @@
 {
-    "logto": "out.log"
+    "logto": "out.log",
+    "threads": 10
 }
