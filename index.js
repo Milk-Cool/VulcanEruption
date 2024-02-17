@@ -147,7 +147,6 @@ const checkServer = async server => {
         await bot.chat("/warp " + i);
         await sleep(3100);
     }
-    await bot.waitForChunksToLoad();
     logger.info("Done checking the warps, looking for the anvil now...");
     const anvil0 = bot.findBlock({
         "matching": block => (
