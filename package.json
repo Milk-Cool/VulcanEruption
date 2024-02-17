@@ -25,6 +25,7 @@
   "dependencies": {
     "jsdom": "^24.0.0",
     "mineflayer": "^4.19.0",
+    "mineflayer-pathfinder": "^2.4.5",
     "pino": "^8.18.0",
     "randomstring": "^1.3.0",
     "vec3": "^0.1.10"
