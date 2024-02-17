@@ -93,17 +93,36 @@ const checkServer = async server => {
         port: port,
         username: username
     };
-    const bot = mineflayer.createBot(opts);
+    let bot = mineflayer.createBot(opts);
     bot.loadPlugin(pathfinder);
     logger.info("Bot started!");
 
+    let loggedIn = false;
+    let handleEnd = true;
+
+    bot.once("login", () => { loggedIn = true });
+    bot.once("end", () => {
+        if(!handleEnd) return;
+        bot = mineflayer.createBot(opts);
+        bot.once("login", () => { loggedIn = true });
+        bot.loadPlugin(pathfinder);
+        logger.info("REstarted!");
+    });
+
     await Promise.race([
-        new Promise(resolve => bot.once("login", resolve)),
+        new Promise(resolve => {
+            const check = () => {
+                if(loggedIn) resolve();
+                else setTimeout(check, 1);
+            }
+            check();
+        }),
         timeoutErrorPromise(5000)
     ]);
+    handleEnd = false;
     logger.info("Logged in!");
 
-    await sleep(1000);
+    await sleep(20000);
     /* bot.on("messagestr", msg => {
         logger.info("AAA DEBUG " + msg);
     }); */
@@ -142,7 +161,8 @@ const checkServer = async server => {
     logger.info("Trying to find an anvil warp and use the anvil...");
     for(let i of [
         "enchant",
-        "anvil"
+        "anvil",
+        "char"
     ]) {
         await bot.chat("/warp " + i);
         await sleep(3100);
