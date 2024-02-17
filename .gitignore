@@ -134,3 +134,4 @@ dist
 config.json
 servers.json
 out.log
+nohup.out
