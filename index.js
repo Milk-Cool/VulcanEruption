@@ -18,6 +18,10 @@ if(!fs.existsSync(LOGFILE)) {
     fs.writeFileSync(LOGFILE, "");
 }
 
+const handleErr = e => logger.warn("Uncaught error: " + e?.stack);
+process.on("uncaughtException", handleErr);
+process.on("unhandledRejection", handleErr);
+
 const timeoutErrorPromise = ms => new Promise((_, reject) => setTimeout(reject, ms, new Error("Timeout after " + ms + " ms")));
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
