@@ -390,7 +390,10 @@ const worker = async () => {
     while(servers.length > 0) {
         const server = servers.shift();
         try {
-            await checkServer(server);
+            await Promise.race([
+                checkServer(server),
+                timeoutErrorPromise(300000) // 5 min
+            ]);
         } catch(e) {
             logger.error("A bot for " + server.ip + " threw an error: " + e.stack);
         }
