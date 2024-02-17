@@ -71,6 +71,10 @@ const sendInvalidPacket = async bot => {
     await bot._client.write("held_item_slot", { "slotId": -1 });
 }
 
+const setErrorHandler = bot => {
+    bot.on("error", () => null);
+}
+
 const checkServer = async server => {
     logger.info("Starting bot...");
     const username = server.username || randomstring.generate(10);
@@ -94,6 +98,7 @@ const checkServer = async server => {
         username: username
     };
     let bot = mineflayer.createBot(opts);
+    setErrorHandler(bot);
     bot.loadPlugin(pathfinder);
     logger.info("Bot started!");
 
@@ -105,6 +110,7 @@ const checkServer = async server => {
         try {
             if(!handleEnd) return;
             bot = mineflayer.createBot(opts);
+            setErrorHandler(bot);
             bot.once("login", () => { loggedIn = true });
             bot.loadPlugin(pathfinder);
             logger.info("REstarted!");
@@ -308,6 +314,7 @@ const checkServer = async server => {
             bot.on("end", async () => {
                 try {
                     const bot = mineflayer.createBot(opts);
+                    setErrorHandler(bot);
                     await Promise.race([
                         new Promise(resolve => bot.once("login", resolve)),
                         timeoutErrorPromise(5000)
