@@ -14,6 +14,7 @@ const scan = async () => {
     const count = Math.ceil(j.count / 50);
     console.log(`Scanning mineserv.top: ${count} pages`)
     for(let i = 0; i < count; i++) {
+        console.log(`Page ${i + 1}`);
         f = await fetch(`https://api.mineserv.top/api/search/?type=pc,pc+mod&tags=5&offset=${i * 50}&limit=50&ordering=rank`, {
             "headers": {
                 "accept": "*/*"
