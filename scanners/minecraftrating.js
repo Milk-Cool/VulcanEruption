@@ -26,7 +26,6 @@ const scan = async () => {
             if(!ver || ver.startsWith("PE")) continue;
             const ip = j.querySelector(".block.ip > .block-i")?.children?.[0]?.children?.[0]?.textContent;
             if(!ip) continue;
-            console.log(ip);
             let server = {};
             server.ip = ip.split(":")[0];
             if(ip.includes(":")) server.port = ip.split(":")[1];
